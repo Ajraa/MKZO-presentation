@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure SIP Trunk Presentation</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f4;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+        }
+        .slide {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            padding: 50px;
+            margin-bottom: 60px;
+            border-left: 8px solid #d9534f;
+            position: relative;
+        }
+        .slide-number {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 2.5em;
+            color: #eee;
+            font-weight: bold;
+        }
+        h1 { color: #d9534f; border-bottom: 3px solid #eee; padding-bottom: 20px; margin-bottom: 30px; }
+        h2 { color: #2c3e50; margin-top: 0; font-size: 1.8em; margin-bottom: 20px; }
+        h3 { color: #d9534f; margin-top: 25px; font-size: 1.3em; }
+        
+        .notes {
+            background-color: #fff8e1;
+            padding: 20px;
+            border-radius: 4px;
+            font-size: 0.95em;
+            margin-top: 30px;
+            border: 1px solid #ffe082;
+            color: #5d4037;
+        }
+        .notes strong { color: #d35400; }
+        
+        /* Styl pro seznamy uvnitř poznámek */
+        .notes ul {
+            margin: 10px 0 0 20px;
+            padding: 0;
+        }
+        .notes li {
+            margin-bottom: 8px;
+        }
+        
+        pre {
+            background: #272822;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 1em;
+            border-left: 6px solid #a6e22e;
+            line-height: 1.6;
+            margin: 20px 0;
+            box-shadow: inset 0 0 10px #000000;
+        }
+        code {
+            background-color: #f0f0f0;
+            padding: 3px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', Courier, monospace;
+            color: #d9534f;
+            font-weight: bold;
+        }
+        
+        .code-highlight {
+            color: #ffff00;
+            font-weight: bold;
+        }
+        
+        .critical-alert {
+            background-color: #ffe6e6;
+            border-left: 5px solid #c0392b;
+            padding: 15px;
+            margin-top: 20px;
+            color: #c0392b;
+        }
+
+        ul { line-height: 1.8; font-size: 1.1em; }
+        li { margin-bottom: 10px; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; margin-bottom: 20px; font-size: 1em; }
+        th, td { border: 1px solid #ddd; padding: 15px; text-align: left; }
+        th { background-color: #f2f2f2; color: #333; border-bottom: 2px solid #aaa; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+
+        .explanation {
+            font-style: italic;
+            color: #666;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <div class="slide">
+        <div class="slide-number">1</div>
+        <h1>Secure SIP Trunk between Asterisk PBXs</h1>
+        <h3>Téma: Zabezpečení VoIP komunikace pomocí TLS a SRTP</h3>
+        
+        <p><strong>Cíl prezentace:</strong> Ukázat kompletní postup konfigurace zabezpečeného propojení (Trunku) mezi dvěma ústřednami Asterisk. Zaměříme se na ochranu proti odposlechu a Man-in-the-Middle útokům.</p>
+        
+        <h3>Motivace: Proč šifrovat?</h3>
+        <ul>
+            <li><strong>Standardní SIP (UDP/5060):</strong> Posílá přihlašovací údaje a telefonní čísla jako prostý text.</li>
+            <li><strong>Standardní RTP:</strong> Hlasová data nejsou šifrována. Kdokoliv s nástrojem Wireshark může hovor nahrát a přehrát.</li>
+            <li><strong>Řešení:</strong> Kombinace TLS (pro signalizaci) a SRTP (pro hlas).</li>
+        </ul>
+
+        <div class="notes">
+            <strong>Komentář:</strong> Začněte důrazně. Ukažte, že VoIP bez šifrování je jako posílat pohlednice poštou – každý si je může přečíst. Cílem je vytvořit "tunel", do kterého nikdo nevidí.
+        </div>
+    </div>
+
+    <div class="slide">
+        <div class="slide-number">2</div>
+        <h2>Princip zabezpečení a Technologie</h2>
+        <p>Pro plné zabezpečení musíme šifrovat dvě oddělené složky hovoru:</p>
+
+        <ul>
+            <li><strong>1. Signalizace (SIP over TLS):</strong>
+                <br><span class="explanation">Řeší "metadata" hovoru (kdo, kam, kdy).</span>
+                <br>Využívá asymetrickou kryptografii (Certifikáty). Běží na portu <strong>5061</strong>. Zajišťuje, že se bavíme se správným serverem.
+            </li>
+            <li><strong>2. Média (SRTP - Secure RTP):</strong>
+                <br><span class="explanation">Řeší samotný hlas.</span>
+                <br>Klíče pro šifrování hlasu se vymění v rámci TLS signalizace (metoda SDES). Pokud není šifrovaná signalizace, útočník by získal i klíče k hlasu.
+            </li>
+        </ul>
+        <hr>
+        <h3>Použité komponenty</h3>
+        <ul>
+            <li><strong>PJSIP:</strong> Moderní SIP stack v Asterisku (nahrazuje zastaralý <code>chan_sip</code>).</li>
+            <li><strong>Mutual TLS:</strong> Oboustranná autentizace. Server A kontroluje certifikát Serveru B a naopak.</li>
+        </ul>
+    </div>
+
+    <div class="slide">
+        <div class="slide-number">3</div>
+        <h2>Koncept: Klient vs. Trunk</h2>
+        <p>Konfigurace, kterou známe z cvičení (připojení telefonu), se pro propojení ústředen zásadně mění. Telefon je "nestabilní" prvek, Server je "statický".</p>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Vlastnost</th>
+                    <th>Klient (Telefon)</th>
+                    <th>Trunk (Server-Server)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Autentizace</strong></td>
+                    <td>Uživatel a Heslo <br><code>(auth_type=userpass)</code></td>
+                    <td>Důvěra na základě <strong>IP a Certifikátu</strong><br><code>(type=identify)</code></td>
+                </tr>
+                <tr>
+                    <td><strong>Dostupnost</strong></td>
+                    <td>Dynamická registrace <br>(IP se mění, telefon se hlásí)</td>
+                    <td>Statická IP adresa<br>(Ústředny se hledají na pevné adrese)</td>
+                </tr>
+                <tr>
+                    <td><strong>Bezpečnost</strong></td>
+                    <td>Jednostranné ověření (Telefon ověřuje Server)</td>
+                    <td><strong>Mutual TLS:</strong> Obě strany se ověřují navzájem.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="slide">
+        <div class="slide-number">4</div>
+        <h2>Příprava Certifikátů</h2>
+        <p>Použijeme pomocný skript <code>ast_tls_cert</code> dodávaný se zdrojovými kódy Asterisku.</p>
+        
+        <h3>Generování CA a Serverového certifikátu</h3>
+        <pre>
+cd /usr/src/asterisk-20*/contrib/scripts
+
+# Spuštění generátoru s parametry:
+# -C : Common Name (IP adresa nebo DNS jméno serveru)
+# -O : Název organizace (vepíše se do certifikátu)
+# -d : Výstupní adresář pro klíče
+
+<span class="code-highlight">./ast_tls_cert -C 158.196.X.X -O "VSB" -d /etc/asterisk/keys</span>
+        </pre>
+        
+        <div class="critical-alert">
+            <strong>⚠️ Proč je parametr -C kritický?</strong>
+            <p>Parametr <code>-C</code> definuje tzv. <strong>Common Name (CN)</strong>. Při navazování spojení si druhá ústředna ověří, zda <em>IP adresa, na kterou volá</em>, souhlasí s <em>IP adresou zapsanou v certifikátu</em>.</p>
+            <p>Pokud se neshodují (např. v certifikátu je 1.1.1.1, ale voláte na 2.2.2.2), spojení bude <strong>okamžitě odmítnuto</strong> jako nedůvěryhodné (ochrana proti podvržení serveru).</p>
+        </div>
+
+        <h3>Výstupní soubory:</h3>
+        <ul>
+            <li><code>ca.crt</code>: Veřejný klíč autority. (Musí se nahrát na druhou ústřednu!)</li>
+            <li><code>asterisk.crt</code>: Veřejný certifikát našeho serveru.</li>
+            <li><code>asterisk.key</code>: Privátní klíč (tajný).</li>
+        </ul>
+    </div>
+
+    <div class="slide">
+        <div class="slide-number">5</div>
+        <h2>Krok 1: Transportní vrstva (pjsip.conf)</h2>
+        <p>Nejdříve musíme Asterisku říct, jak má naslouchat šifrované komunikaci. Definujeme sekci typu <code>transport</code>.</p>
+
+        <pre>
+[transport-tls]
+type=transport
+<span class="code-highlight">protocol=tls</span>
+<span class="code-highlight">bind=0.0.0.0:5061             ; Standardní port pro SIPS (Secure SIP)</span>
+ca_list_file=/etc/asterisk/keys/ca.crt
+cert_file=/etc/asterisk/keys/asterisk.crt
+priv_key_file=/etc/asterisk/keys/asterisk.key
+method=tlsv1_2                ; Vynucení bezpečné verze protokolu
+        </pre>
+        
+        <p><strong>Vysvětlení parametrů:</strong></p>
+        <ul>
+            <li><code>bind=0.0.0.0:5061</code>: Nasloucháme na všech síťových kartách, ale na portu 5061 (aby nedošlo ke kolizi s UDP/5060).</li>
+            <li><code>cert_file</code> a <code>priv_key_file</code>: Cesty k souborům, které jsme vygenerovali v předchozím kroku.</li>
+        </ul>
+    </div>
+
+    <div class="slide">
+        <div class="slide-number">6</div>
+        <h2>Krok 2: Konfigurace Trunku (Endpoint)</h2>
+        <p>Zde definujeme logiku propojení. Skládá se ze tří vzájemně propojených sekcí.</p>
+
+        <pre>
+; 1. ENDPOINT - definice vlastností hovoru
+[trunk-peer]
+type=endpoint
+<span class="code-highlight">transport=transport-tls       ; Použijeme náš TLS transport</span>
+context=from-trunk            ; Bezpečný kontext pro příchozí hovory
+disallow=all
+allow=ulaw
+<span class="code-highlight">media_encryption=sdes         ; KRITICKÉ: Zapíná šifrování hlasu (SRTP)</span>
+aors=trunk-peer
+
+; 2. IDENTIFY - Jak poznáme, že volá druhá ústředna?
+[trunk-peer]
+<span class="code-highlight">type=identify                 ; Místo hesla používáme IP adresu</span>
+match=158.196.Y.Y             ; IP adresa protistrany
+endpoint=trunk-peer
+
+; 3. AOR - Kde se nachází druhá ústředna?
+[trunk-peer]
+type=aor
+<span class="code-highlight">contact=sip:158.196.Y.Y:5061  ; Statická adresa a TLS port</span>
+        </pre>
+
+        <div class="notes">
+            <strong>Komentář:</strong>
+            <ul>
+                <li><strong>type=identify:</strong> Nahrazuje starou sekci <code>[auth]</code> (jméno/heslo). Asterisk se podívá na zdrojovou IP adresu paketu, a pokud odpovídá parametru <code>match</code>, pustí hovor dál bez nutnosti přihlašování.</li>
+                <li><strong>media_encryption=sdes:</strong> Toto je absolutně klíčový řádek. Zajišťuje, že Asterisk vygeneruje šifrovací klíče pro SRTP a bezpečně je pošle druhé straně uvnitř TLS tunelu. Bez tohoto řádku by byl hovor nešifrovaný!</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="slide">
+        <div class="slide-number">7</div>
+        <h2>Troubleshooting a Řešení problémů</h2>
+        
+        <p>Nejčastější problémy při zprovoznění Secure Trunku:</p>
+
+        <h3>1. Kolize portů (Chan_SIP vs PJSIP)</h3>
+        <p>Starý ovladač <code>chan_sip</code> se může snažit obsadit porty. Je nutné ho zcela vypnout.</p>
+        <p>Soubor: <code>/etc/asterisk/modules.conf</code></p>
+        <pre><span class="code-highlight">noload => chan_sip.so</span></pre>
+        <p>Následně restart: <code>systemctl restart asterisk</code></p>
+
+        <h3>2. "Wrong Authentication" nebo odmítnutí spojení</h3>
+        <p>Často způsobeno chybějícím CA certifikátem protistrany. Ověřte, že máte ve složce <code>keys</code> soubor <code>ca.crt</code> od druhé ústředny (nebo spojený soubor obou CA).</p>
+
+        <h3>3. Diagnostika v CLI</h3>
+        <pre>
+pjsip set logger on     ; Zobrazí kompletní SIP hlavičky
+        </pre>
+        <p>Pokud vidíte v logu <code>TRANSPORT=TLS</code> a v SDP zprávě <code>crypto:...</code>, šifrování funguje.</p>
+
+        <p style="text-align: center; font-weight: bold; margin-top: 40px; color: #d9534f; font-size: 1.2em;">Závěr: Secure Trunk zajišťuje důvěrnost signalizace i integrity hlasu.</p>
+    </div>
+
+</div>
+
+</body>
+</html>
