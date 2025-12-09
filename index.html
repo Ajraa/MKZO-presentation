@@ -48,7 +48,6 @@
         }
         .notes strong { color: #d35400; }
         
-        /* Styl pro seznamy uvnitř poznámek */
         .notes ul {
             margin: 10px 0 0 20px;
             padding: 0;
@@ -278,6 +277,52 @@ type=aor
 
     <div class="slide">
         <div class="slide-number">7</div>
+        <h2>Krok 3: Směrování hovorů (Dialplan)</h2>
+        <p>Posledním krokem konfigurace je říct Asterisku, která čísla má posílat do tohoto zabezpečeného tunelu. Editujeme soubor <code>/etc/asterisk/extensions.conf</code>.</p>
+
+        <pre>
+[internal]
+; Příklad: Volání na rozsah 2000-2999 pošleme na druhou ústřednu
+; Použijeme protokol PJSIP a definovaný endpoint 'trunk-peer'
+
+<span class="code-highlight">exten => _2XXX,1,Dial(PJSIP/${EXTEN}@trunk-peer)</span>
+        </pre>
+
+        <div class="notes">
+            <strong>Vysvětlení syntaxe:</strong>
+            <ul>
+                <li><strong>_2XXX:</strong> Maska pro čísla. Podtržítko znamená "začátek vzoru", X znamená "jakákoliv číslice 0-9". Tedy cokoliv od 2000 do 2999.</li>
+                <li><strong>PJSIP/...@trunk-peer:</strong> Říkáme Asterisku: "Vezmi vytočené číslo (<code>${EXTEN}</code>) a pošli ho přes kanál PJSIP na endpoint <code>trunk-peer</code>."</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="slide">
+        <div class="slide-number">8</div>
+        <h2>Krok 4: Aplikace změn a Ověření</h2>
+        <p>Editace souborů nestačí. Konfiguraci je nutné načíst do paměti a ověřit stav spojení.</p>
+
+        <h3>1. Restart služby</h3>
+        [cite_start]<p>Aby se uplatnily certifikáty a konfigurace, provedeme restart[cite: 142, 143].</p>
+        <pre><span class="code-highlight">systemctl restart asterisk</span></pre>
+
+        <h3>2. Kontrola spojení v CLI</h3>
+        <p>Vstoupíme do konzole příkazem <code>asterisk -rvvv</code> a zadáme:</p>
+        <pre>pjsip show endpoints</pre>
+        
+        <p><strong>Co hledáme ve výstupu?</strong></p>
+        <ul>
+            <li><strong>Endpoint: trunk-peer:</strong> Stav by měl být <code>Avail</code> (Dostupný) nebo <code>Not in use</code>.</li>
+            <li>Pokud vidíte <code>Unavailable</code>, spojení nefunguje (zkontrolujte firewall nebo certifikáty).</li>
+        </ul>
+        
+        <div class="notes">
+            <strong>Komentář:</strong> Toto je moment pravdy. Pokud restart neproběhne nebo endpoint není dostupný, volání nebude fungovat.
+        </div>
+    </div>
+
+    <div class="slide">
+        <div class="slide-number">9</div>
         <h2>Troubleshooting a Řešení problémů</h2>
         
         <p>Nejčastější problémy při zprovoznění Secure Trunku:</p>
